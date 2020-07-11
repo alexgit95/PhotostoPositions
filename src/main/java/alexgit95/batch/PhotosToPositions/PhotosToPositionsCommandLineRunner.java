@@ -15,6 +15,7 @@ import org.springframework.stereotype.Component;
 
 import com.google.gson.Gson;
 
+import alexgit95.batch.PhotosToPositions.model.IgnorePlace;
 import alexgit95.batch.PhotosToPositions.model.LocationsOutput;
 import alexgit95.batch.PhotosToPositions.model.Photos;
 import alexgit95.batch.PhotosToPositions.services.DaoServices;
@@ -42,6 +43,8 @@ public class PhotosToPositionsCommandLineRunner implements CommandLineRunner {
 		long debut=System.nanoTime();
 		List<Photos> allPhotos = daoServices.getAllPictures();
 		List<LocationsOutput> allPositions = daoServices.getAllPositions();
+		List<IgnorePlace> allIgnorePlaces = daoServices.getAllIgnorePlaces();
+		
 		
 		
 		
@@ -53,6 +56,11 @@ public class PhotosToPositionsCommandLineRunner implements CommandLineRunner {
 		});
 		
 		Predicate<Photos> filter = photo -> {
+			for (IgnorePlace ignorePlace : allIgnorePlaces) {
+				if(Utils.distance(ignorePlace.getLattitude(), photo.getLattitude(), ignorePlace.getLongitude(), photo.getLongitude())<1000) {
+					return false;
+				}
+			}
 			return !dejaEnregistre.containsKey(Utils.truncateDate(photo.getDateprise()));
 		};
 		
