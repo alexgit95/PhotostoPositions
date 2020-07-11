@@ -5,6 +5,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,17 +42,19 @@ public class PhotosToPositionsCommandLineRunner implements CommandLineRunner {
 		long debut=System.nanoTime();
 		List<Photos> allPhotos = daoServices.getAllPictures();
 		List<LocationsOutput> allPositions = daoServices.getAllPositions();
-		Gson gson=new Gson();
-		System.out.println(gson.toJson(allPositions));
-		if(allPositions.size()>0) {
-			return;
-		}
+		
+		
+		
 		
 		
 		//Ajout des poisitions deja existante dans la DB
 		allPositions.stream().forEach(location -> { 
 			dejaEnregistre.put(Utils.truncateDate(location.getBegin()), new Photos(location.getName(),location.getLattitude(),location.getLongitude(),location.getBegin())); 
 		});
+		
+		Predicate<Photos> filter = photo -> {
+			return !dejaEnregistre.containsKey(Utils.truncateDate(photo.getDateprise()));
+		};
 		
 		logger.info("Avant traitement "+allPhotos.size());
 		
@@ -67,19 +70,25 @@ public class PhotosToPositionsCommandLineRunner implements CommandLineRunner {
 			output.setLattitude(photo.getLattitude());
 			output.setLongitude(photo.getLongitude());
 			elementsTraite.add(output);
+			
 			daoServices.savePosition(output);
 						
 		};
 		
 		
-		allPhotos.stream().distinct().forEach(savePhotos);
 		
+		//traitement
+		allPhotos.stream().distinct().filter(filter).forEach(savePhotos);
 		
+		//CR
 		long fin=System.nanoTime();
 		long duree=fin-debut;
 		logger.info("Duree execution : "+(duree/1000000)+"ms");
 		setNbElementsTraites(elementsTraite.size());
 		logger.info("Elements finalement traites : "+elementsTraite.size());
+		Gson gson=new Gson();
+		logger.info(gson.toJson(allPositions));
+		
 		
 	}
 
